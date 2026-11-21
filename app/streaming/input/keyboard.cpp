@@ -500,6 +500,18 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
         }
     }
 
+    if (event->keysym.scancode == SDL_SCANCODE_INTERNATIONAL1) {
+        const short altGrKey = (short)(0x8000 | 0xA5);
+        const short qKey = (short)(0x8000 | 0x51);
+        if (event->state == SDL_PRESSED) {
+            LiSendKeyboardEvent2(altGrKey, KEY_ACTION_DOWN, modifiers | MODIFIER_ALT, 0);
+            LiSendKeyboardEvent2(qKey, KEY_ACTION_DOWN, modifiers | MODIFIER_ALT, 0);
+            LiSendKeyboardEvent2(qKey, KEY_ACTION_UP, modifiers | MODIFIER_ALT, 0);
+            LiSendKeyboardEvent2(altGrKey, KEY_ACTION_UP, modifiers, 0);
+        }
+        return;
+    }
+
     keyCode |= 0x8000;
     flags = shouldNotConvertToScanCodeOnServer ? SS_KBE_FLAG_NON_NORMALIZED : 0;
 
