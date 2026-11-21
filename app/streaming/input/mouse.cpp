@@ -34,6 +34,9 @@ void SdlInputHandler::handleMouseButtonEvent(SDL_MouseButtonEvent* event)
         // Ignore synthetic mouse events
         return;
     }
+    else if (handleToolbarButton(event)) {
+        return;
+    }
     else if (!isCaptureActive()) {
         if (event->button == SDL_BUTTON_LEFT && event->state == SDL_RELEASED &&
                 isMouseInVideoRegion(event->x, event->y)) {
@@ -118,6 +121,8 @@ void SdlInputHandler::handleMouseMotionEvent(SDL_MouseMotionEvent* event)
 
     // We should not reference the original event anymore
     event = nullptr;
+
+    handleToolbarMotion(x, y);
 
     if (m_AbsoluteMouseMode) {
         int windowWidth, windowHeight;

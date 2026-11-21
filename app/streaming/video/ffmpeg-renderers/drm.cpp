@@ -1573,6 +1573,10 @@ void DrmRenderer::notifyOverlayUpdated(Overlay::OverlayType type)
             overlayRect.x = 0;
             overlayRect.y = 0;
         }
+        else if (type == Overlay::OverlayToolbar) {
+            overlayRect.x = (m_OutputRect.w - newSurface->w) / 2;
+            overlayRect.y = 0;
+        }
 
         overlayRect.w = newSurface->w;
         overlayRect.h = newSurface->h;

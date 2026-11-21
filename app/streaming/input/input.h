@@ -250,5 +250,23 @@ private:
     char m_DragButton;
     int m_NumFingersDown;
 
+    enum ToolbarButton {
+        ToolbarNone = -1,
+        ToolbarMinimize,
+        ToolbarFullScreen,
+        ToolbarClose,
+        ToolbarButtonCount
+    };
+
+    bool handleToolbarMotion(int x, int y);
+    bool handleToolbarButton(SDL_MouseButtonEvent* event);
+    void setToolbarState(bool visible, int hover);
+    int toolbarButtonAt(int x, int y);
+    float toolbarPixelScale();
+
+    bool m_ToolbarVisible = false;
+    int m_ToolbarHover = ToolbarNone;
+    int m_ToolbarPressed = ToolbarNone;
+
     static const int k_ButtonMap[];
 };
