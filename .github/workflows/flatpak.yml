@@ -20,6 +20,13 @@ jobs:
       - uses: actions/checkout@v5
         with:
           submodules: recursive
+      - uses: actions/cache@v4
+        with:
+          path: .flatpak-builder
+          key: flatpak-builder-${{ hashFiles('flatpak/**') }}-${{ github.sha }}
+          restore-keys: |
+            flatpak-builder-${{ hashFiles('flatpak/**') }}-
+            flatpak-builder-
       - name: Import signing key
         if: github.event_name != 'pull_request'
         env:
@@ -63,8 +70,8 @@ jobs:
           sudo apt-get install -y -q flatpak
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
           flatpak install --user -y --noninteractive moonlight.flatpak
-          flatpak run --command=moonlight com.moonlight_stream.Moonlight --version
-          flatpak run --command=moonlight com.moonlight_stream.Moonlight help >/dev/null 2>&1 || true
+          flatpak info com.moonlight_stream.Moonlight
+          flatpak run --env=QT_QPA_PLATFORM=offscreen --command=moonlight com.moonlight_stream.Moonlight --version
 
   publish:
     needs: [build, test]
