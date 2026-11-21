@@ -1,0 +1,38 @@
+name: Upstream release
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge-upstream:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Merge the latest upstream release into a PR branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git remote add upstream https://github.com/moonlight-stream/moonlight-qt.git
+          git fetch -q --tags upstream
+          TAG=$(git tag -l 'v*' --sort=-v:refname | head -1)
+          if git merge-base --is-ancestor "$TAG" HEAD; then
+            echo "Already on $TAG"
+            exit 0
+          fi
+          BRANCH="upstream/$TAG"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git merge --no-edit "$TAG"
+          git push -f origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" --title "Merge upstream $TAG" \
+            --body "Upstream Moonlight $TAG. The Flatpak workflow builds and tests it; merging publishes it to the Pages flatpak repo." \
+            || echo "PR already open"

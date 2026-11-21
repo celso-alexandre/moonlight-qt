@@ -1,0 +1,79 @@
+name: Flatpak
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: flatpak-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:freedesktop-25.08
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Import signing key
+        if: github.event_name != 'pull_request'
+        env:
+          GPG_KEY: ${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}
+        run: |
+          echo "$GPG_KEY" | gpg --batch --import
+          echo "GPG_ARGS=--gpg-sign=${{ secrets.FLATPAK_GPG_KEY_ID }}" >> "$GITHUB_ENV"
+      - name: Build
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak-builder --user --install-deps-from=flathub --force-clean --disable-rofiles-fuse \
+            --default-branch=stable --repo=repo $GPG_ARGS build flatpak/com.moonlight_stream.Moonlight.json
+          flatpak build-bundle repo moonlight.flatpak com.moonlight_stream.Moonlight stable \
+            --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo
+      - uses: actions/upload-artifact@v5
+        with:
+          name: flatpak
+          path: moonlight.flatpak
+      - name: Assemble Pages site
+        if: github.event_name != 'pull_request'
+        run: |
+          flatpak build-update-repo --generate-static-deltas --prune $GPG_ARGS repo
+          mkdir -p site
+          cp -r repo site/repo
+          cp flatpak/moonlight-loja.flatpakrepo site/
+      - uses: actions/upload-pages-artifact@v4
+        if: github.event_name != 'pull_request'
+        with:
+          path: site
+
+  test:
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          name: flatpak
+      - name: Install and run
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q flatpak
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install --user -y --noninteractive moonlight.flatpak
+          flatpak run --command=moonlight com.moonlight_stream.Moonlight --version
+          flatpak run --command=moonlight com.moonlight_stream.Moonlight help >/dev/null 2>&1 || true
+
+  publish:
+    needs: [build, test]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/deploy-pages@v4
